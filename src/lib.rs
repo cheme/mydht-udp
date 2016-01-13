@@ -33,6 +33,7 @@ use mydht_base::transport::{
   WriteTransportStream,
   SpawnRecMode,
   ReaderHandle,
+  SerSocketAddr,
 };
 //use super::{Attachment};
 use std::io::Result as IoResult;
@@ -79,7 +80,7 @@ pub struct ReadUdpStream (Vec<u8>);
 
 pub struct UdpStream {
   sock : UdpSocket,  // we clone old io but streamreceive is not allowed
-  with : SocketAddr, // old io could be clone , with new io manage protection ourselve
+  with : SerSocketAddr, // old io could be clone , with new io manage protection ourselve
   //if define we can send overwhise it is send in server : panic!
   buf : Vec<u8>,
   maxsize : usize,
@@ -98,7 +99,7 @@ impl Write for UdpStream {
       }
     }
     fn flush(&mut self) -> IoResult<()> {
-      try!(self.sock.send_to(&self.buf[..], self.with));
+      try!(self.sock.send_to(&self.buf[..], self.with.0));
       self.buf = Vec::new();
       Ok(())
     }
@@ -160,7 +161,7 @@ impl Read for ReadUdpStream {
 impl Transport for Udp {
   type ReadStream = ReadUdpStream;
   type WriteStream = UdpStream;
-  type Address = SocketAddr;
+  type Address = SerSocketAddr;
   
   fn do_spawn_rec(&self) -> SpawnRecMode {
     if self.spawn {
@@ -206,7 +207,7 @@ impl Transport for Udp {
   /// does not return a read handle as udp is unconnected (variant with read buf synch would need to
   /// be returned).
   /// Function never fail as udp is unconnected (write will fail!!)
-  fn connectwith(&self, p : &SocketAddr, _ : Duration) -> IoResult<(UdpStream, Option<ReadUdpStream>)> {
+  fn connectwith(&self, p : &SerSocketAddr, _ : Duration) -> IoResult<(UdpStream, Option<ReadUdpStream>)> {
     let readso = try!(self.sock.try_clone());
     // get socket (non connected cannot timeout)
     Ok((UdpStream {
